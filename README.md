@@ -764,7 +764,7 @@ The preallocation algorithm used is the following: every time the string
 is reallocated in order to hold more bytes, the actual allocation size performed
 is two times the minimum required. So for instance if the string currently
 is holding 30 bytes, and we concatenate 2 more bytes, instead of allocating 32
-bytes in total SDS will allocate 64 bytes.
+bytes in total SDS will allocate 34 bytes.
 
 However there is an hard limit to the allocation it can perform ahead, and is
 defined by `SDS_MAX_PREALLOC`. SDS will never allocate more than 1MB of
