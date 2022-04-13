@@ -952,7 +952,7 @@ int sdsneedsrepr(const sds s) {
 
     while (len--) {
         if (*p == '\\' || *p == '"' || *p == '\n' || *p == '\r' ||
-            *p == '\t' || *p == '\a' || *p == '\b' || !isprint(*p) || isspace(*p)) return 1;
+            *p == '\t' || *p == '\a' || *p == '\b' || !isprint((int) (*p)) || isspace((int) (*p))) return 1;
         p++;
     }
 
