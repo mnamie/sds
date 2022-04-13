@@ -846,9 +846,10 @@ int sdscmp(const sds s1, const sds s2) {
  * separator, NULL is returned.
  *
  * Note that 'sep' is able to split a string using
- * a multi-character separator. For example
- * sdssplit("foo_-_bar","_-_"); will return two
- * elements "foo" and "bar".
+ * a multi-character separator. For example, with string: 
+ * sds s = sdsnew("foo_-_bar"); int count;
+ * sdssplitlen(s, sdslen(s), "_-_", 3, &count); will return two
+ * elements "foo" and "bar" with count set to 2.
  *
  * This version of the function is binary-safe but
  * requires length arguments.
