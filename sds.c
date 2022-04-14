@@ -1,4 +1,4 @@
-/* SDSLib 2.1 -- A C dynamic strings library
+/* SDSLib 2.2 -- A C dynamic strings library
  *
  * Copyright (c) 2006-2015, Salvatore Sanfilippo <antirez at gmail dot com>
  * Copyright (c) 2015, Oran Agra
@@ -891,7 +891,7 @@ int sdscmp(const sds s1, const sds s2) {
  * separator, NULL is returned.
  *
  * Note that 'sep' is able to split a string using
- * a multi-character separator. For example, with string: 
+ * a multi-character separator. For example, with string:
  * sds s = sdsnew("foo_-_bar"); int count;
  * sdssplitlen(s, sdslen(s), "_-_", 3, &count); will return two
  * elements "foo" and "bar" with count set to 2.
@@ -1415,7 +1415,7 @@ int sdsTest(void) {
             memcmp(x,"0FOO1BAR\n\0",10) == 0);
 
         sdsfree(x);
-		
+
         /* Test sdsresize - extend */
         x = sdsnew("1234567890123456789012345678901234567890");
         x = sdsResize(x, 200);

@@ -1,5 +1,13 @@
+Version 2.2
+===
+
+* Feat: new sdsneedsrepr and sdsResize api
+* Fix: sdscatvprintf efficiency improvements
+* Fix: typos in function comments
+* Fix: char passed to isprint and isspace, must be int
+
 Version 2.1
-==
+===
 
 Merged security fixes and enhancements from redis and pull requests from upstream repository.
 
@@ -24,6 +32,7 @@ Version 2.0
 * sdscatfmt() replacement for sdscatprintf() for speed critical code added.
 * Ability to easily switch allocator just changing sdsalloc.h
 * No longer binary compatible with SDS v1.0.
+
 
 Version 1.0
 ===
