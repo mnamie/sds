@@ -5,6 +5,7 @@ Version 2.2
 * Fix: sdscatvprintf efficiency improvements
 * Fix: typos in function comments
 * Fix: char passed to isprint and isspace, must be int
+* Fix: sdstrim modifies string in place
 
 Version 2.1
 ===
