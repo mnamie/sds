@@ -266,6 +266,8 @@ sds sdscat(sds s, const char *t);
 The main string concatenation functions are `sdscatlen` and `sdscat` that are
 identical, the only difference being that `sdscat` does not have an explicit
 length argument since it expects a null terminated string.
+Note that `sdscatlen` does not stop copying upon a null in the source
+(unlike the standard `strncat`).
 
 ```c
 sds s = sdsempty();
