@@ -599,83 +599,115 @@ sds sdscpy(sds s, const char *t) {
     return sdscpylen(s, t, strlen(t));
 }
 
-/* Helper for sdscatlonglong() doing the actual number -> string
- * conversion. 's' must point to a string with room for at least
- * SDS_LLSTR_SIZE bytes.
- *
- * The function returns the length of the null-terminated string
- * representation stored at 's'. */
-#define SDS_LLSTR_SIZE 21
-int sdsll2str(char *s, long long value) {
-    char *p, aux;
-    unsigned long long v;
-    size_t l;
-
-    /* Generate the string representation, this method produces
-     * a reversed string. */
-    if (value < 0) {
-        /* Since v is unsigned, if value==LLONG_MIN then
-         * -LLONG_MIN will overflow. */
-        if (value != LLONG_MIN) {
-            v = -value;
-        } else {
-            v = ((unsigned long long)LLONG_MAX) + 1;
+/* Return the number of digits of 'v' when converted to string in radix 10.
+ * See sdsll2string() for more information. */
+uint32_t digits10(uint64_t v) {
+    if (v < 10) return 1;
+    if (v < 100) return 2;
+    if (v < 1000) return 3;
+    if (v < 1000000000000UL) {
+        if (v < 100000000UL) {
+            if (v < 1000000) {
+                if (v < 10000) return 4;
+                return 5 + (v >= 100000);
+            }
+            return 7 + (v >= 10000000UL);
         }
+        if (v < 10000000000UL) {
+            return 9 + (v >= 1000000000UL);
+        }
+        return 11 + (v >= 100000000000UL);
+    }
+    return 12 + digits10(v / 1000000000000UL);
+}
+
+/* Convert a unsigned long long into a string. Returns the number of
+ * characters needed to represent the number.
+ * If the buffer is not big enough to store the string, 0 is returned.
+ *
+ * Based on the following article (that apparently does not provide a
+ * novel approach but only publicizes an already used technique):
+ *
+ * https://www.facebook.com/notes/facebook-engineering/three-optimization-tips-for-c/10151361643253920 */
+int sdsull2string(char *dst, size_t dstlen, unsigned long long value) {
+    static const char digits[201] =
+        "0001020304050607080910111213141516171819"
+        "2021222324252627282930313233343536373839"
+        "4041424344454647484950515253545556575859"
+        "6061626364656667686970717273747576777879"
+        "8081828384858687888990919293949596979899";
+
+    /* Check length. */
+    uint32_t length = digits10(value);
+    if (length >= dstlen) goto err;;
+
+    /* Null term. */
+    uint32_t next = length - 1;
+    dst[next + 1] = '\0';
+    while (value >= 100) {
+        int const i = (value % 100) * 2;
+        value /= 100;
+        dst[next] = digits[i + 1];
+        dst[next - 1] = digits[i];
+        next -= 2;
+    }
+
+    /* Handle last 1-2 digits. */
+    if (value < 10) {
+        dst[next] = '0' + (uint32_t) value;
     } else {
-        v = value;
+        int i = (uint32_t) value * 2;
+        dst[next] = digits[i + 1];
+        dst[next - 1] = digits[i];
     }
-
-    p = s;
-    do {
-        *p++ = '0'+(v%10);
-        v /= 10;
-    } while(v);
-    if (value < 0) *p++ = '-';
-
-    /* Compute length and add null term. */
-    l = p-s;
-    *p = '\0';
-
-    /* Reverse the string. */
-    p--;
-    while(s < p) {
-        aux = *s;
-        *s = *p;
-        *p = aux;
-        s++;
-        p--;
-    }
-    return l;
+    return length;
+err:
+    /* force add Null termination */
+    if (dstlen > 0)
+        dst[0] = '\0';
+    return 0;
 }
 
-/* Identical sdsll2str(), but for unsigned long long type. */
-int sdsull2str(char *s, unsigned long long v) {
-    char *p, aux;
-    size_t l;
+/* Convert a long long into a string. Returns the number of
+ * characters needed to represent the number.
+ * If the buffer is not big enough to store the string, 0 is returned. */
+int sdsll2string(char *dst, size_t dstlen, long long svalue) {
+    unsigned long long value;
+    int negative = 0;
 
-    /* Generate the string representation, this method produces
-     * a reversed string. */
-    p = s;
-    do {
-        *p++ = '0'+(v%10);
-        v /= 10;
-    } while(v);
-
-    /* Compute length and add null term. */
-    l = p-s;
-    *p = '\0';
-
-    /* Reverse the string. */
-    p--;
-    while(s < p) {
-        aux = *s;
-        *s = *p;
-        *p = aux;
-        s++;
-        p--;
+    /* The ull2string function with 64bit unsigned integers for simplicity, so
+     * we convert the number here and remember if it is negative. */
+    if (svalue < 0) {
+        if (svalue != LLONG_MIN) {
+            value = -svalue;
+        } else {
+            value = ((unsigned long long) LLONG_MAX)+1;
+        }
+        if (dstlen < 2)
+            goto err;
+        negative = 1;
+        dst[0] = '-';
+        dst++;
+        dstlen--;
+    } else {
+        value = svalue;
     }
-    return l;
+
+    /* Converts the unsigned long long value to string*/
+    int length = sdsull2string(dst, dstlen, value);
+    if (length == 0) return 0;
+    return length + negative;
+
+err:
+    /* force add Null termination */
+    if (dstlen > 0)
+        dst[0] = '\0';
+    return 0;
 }
+
+
+/* Bytes needed for long -> str + '\0' */
+#define SDS_LLSTR_SIZE 21
 
 /* Create an sds string from a long long value. It is much faster than:
  *
@@ -683,7 +715,7 @@ int sdsull2str(char *s, unsigned long long v) {
  */
 sds sdsfromlonglong(long long value) {
     char buf[SDS_LLSTR_SIZE];
-    int len = sdsll2str(buf,value);
+    int len = sdsll2string(buf,sizeof(buf),value);
 
     return sdsnewlen(buf,len);
 }
@@ -831,7 +863,7 @@ sds sdscatfmt(sds s, char const *fmt, ...) {
                     num = va_arg(ap,long long);
                 {
                     char buf[SDS_LLSTR_SIZE];
-                    l = sdsll2str(buf,num);
+                    l = sdsll2string(buf,sizeof(buf),num);
                     if (sdsavail(s) < l) {
                         s = sdsMakeRoomFor(s,l);
                     }
@@ -851,7 +883,7 @@ sds sdscatfmt(sds s, char const *fmt, ...) {
                     unum = va_arg(ap,unsigned long long);
                 {
                     char buf[SDS_LLSTR_SIZE];
-                    l = sdsull2str(buf,unum);
+                    l = sdsull2string(buf,sizeof(buf),unum);
                     if (sdsavail(s) < l) {
                         s = sdsMakeRoomFor(s,l);
                     }
