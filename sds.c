@@ -1409,6 +1409,7 @@ int sdsTest(void) {
         test_cond("sdscatprintf() seems working with \\0 inside of result",
             sdslen(x) == 3 && memcmp(x,"a\0""b\0",4) == 0)
 
+        #ifndef _MSC_VER
         {
             sdsfree(x);
             char etalon[1024*1024];
@@ -1419,6 +1420,7 @@ int sdsTest(void) {
             test_cond("sdscatprintf() can print 1MB",
                 sdslen(x) == sizeof(etalon) && memcmp(x,etalon,sizeof(etalon)) == 0)
         }
+        #endif
 
         sdsfree(x);
         x = sdsnew("--");
